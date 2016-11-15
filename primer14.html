@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<meta charset = utf-8>    
+
+<html>
+<head>
+    <title>Primer z potenciometrom</title>
+</head>    
+
+<body onload="load()";>
+
+<div>
+<canvas id="cv" width = "200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>
+<p></p>
+</div>
+
+<p></p>
+
+<div id="izpis"></div>
+
+<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+
+<script type="text/javascript">
+
+var potVrednost1 = 0; // vrednost 1. potenciometra
+var potVrednost2 = 0; // vrednost 2. potenciometra
+var izpis = document.getElementById("izpis");
+var stevec = 0; // za štetje sporočil
+var x1 = new Array(); // polje za x1 spremenljivko
+var y1 = new Array(); // polje za y1 spremenjivko
+var x2 = new Array(); // polje za x2 spremenljivko
+var y2 = new Array(); // polje za y2 spremenjivko
+var canvas;
+var ctx;
+
+var socket = io.connect("192.168.254.128:8080"); // ustvarimo socket - se povežemo
+
+function load() {
+    canvas = document.getElementById("cv");
+    ctx = canvas.getContext("2d");
+
+    // Graf - inicializacija
+    ctx.lineWidth = "1";
+    ctx.strokeStyle = "#ff0000";
+    
+    // Izrišemo prvo časovno vrsto
+    for (i=0; i<200; i++) {
+        x1[i] = i; // za x so vrednosti 0, 1, 2, ...
+        y1[i] = 50; // za y so začetne vrednosti 0
+        ctx.lineTo(x1[i], y1[i]); // narišemo črto do naslednje točke
+    };
+    
+    ctx.stroke(); // črta se izriše šele ob ukazu "stroke"
+    
+    // Inicializacija druge črte
+    ctx.lineWidth = "1";
+    ctx.strokeStyle = "#00ff00";
+    
+    // Izrišemo prvo časovno vrsto
+    for (i=0; i<200; i++) {
+        x2[i] = i; // za x2 so vrednosti 0, 1, 2, ...
+        y2[i] = 100; // za y2 so začetne vrednosti 0
+        ctx.lineTo(x2[i], y2[i]); // narišemo črto do naslednje točke
+    };
+    
+    ctx.stroke(); // črta se izriše šele ob ukazu "stroke"
+    
+};
+
+function log(msg) { // funkcija za izpis sporočil z izvedenim pomikom ("scroll-om")
+    var node=document.createElement("tr"); // ustvarimo spremenljivko node kot vrst. tab. tr (table row)
+    var textnode=document.createTextNode(stevec + " | " + msg); // ustvarimo elem. z besedilom
+    node.appendChild(textnode); // dodamo izpis k "node", t.j. vrstici tabele
+    izpis.insertBefore(node, izpis.childNodes[0]); // vstavimo v spr. izpis -> document.getElementById("izpis");
+    if (stevec > 9) { // če je vrstic več kot 10
+        izpis.removeChild(izpis.childNodes[10], izpis.childNodes[10]); // odstranimo najstarejši izpis
+    }
+    stevec = stevec + 1; // povečamo število izpisov   
+}
+
+socket.on("klientBeriVrednosti", function(value){
+    potVrednost1 = value.želenaVrednost;
+    potVrednost2 = value.dejanskaVrednost;
+    
+    // Graf izris *****************************************
+
+    // Izris prve črte
+    ctx.lineWidth = "1";
+    ctx.strokeStyle = "#ff0000";
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // brišemo platno
+    ctx.beginPath(); // za začetek izrisa črte
+    y1.splice(0, 1); // na mestu 0  v polju y1 brišemo eno vrednost
+    y1[199] = potVrednost1; // novo vrednost pa dodamo na koncu
+    
+    for (i=0; i<200; i++) {
+        ctx.lineTo(x1[i], (100 - (y1[i] / 1023) * 100)); // x,y koordinata je desno zg.
+    };
+
+    ctx.stroke(); // za izris črte
+    
+    // Izris druge črte
+    ctx.lineWidth = "1";
+    ctx.strokeStyle = "#00ff00";
+    ctx.beginPath(); // za začetek izrisa črte
+    y2.splice(0, 1); // na mestu 0  v polju y2 brišemo eno vrednost
+    y2[199] = potVrednost2; // novo vrednost pa dodamo na koncu
+    
+    for (i=0; i<200; i++) {
+        ctx.lineTo(x2[i], (100 - (y2[i] / 1023) * 100)); // x,y koordinata je desno zg.
+    };
+
+    ctx.stroke(); // za izris druge črte
+
+    // Graf izris *****************************************
+    
+    log(potVrednost1);
+    log(potVrednost2);
+    
+});
+
+socket.on("sporociloKlientu", function(msg) {
+    log(msg); // izpišem sporočilo v div s pomočjo funkcije log
+});
+    
+</script>
+    
+</body>
+
+</html>
